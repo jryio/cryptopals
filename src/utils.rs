@@ -12,7 +12,7 @@ pub fn xor_single_byte(buffer: &[u8], single: u8) -> Vec<u8> {
 /// Computes the frequency of characters in an buffer and compares against known English langauge
 /// character frequency, returning a score.
 pub fn frequency_score(buffer: &[u8]) -> f64 {
-    let default_frequency = 0.0008;
+    let default_frequency = 0.0;
     let english_letters = String::from("abcdefghijklmnopqrstuvwxyz");
     let english_frequency: [f64; 26] = [
         8.2,   /* A */
@@ -76,7 +76,6 @@ pub fn frequency_score(buffer: &[u8]) -> f64 {
         };
 
         let actual_num = f;
-        // println!("char = {c} actual = {actual_num} expected = {expected_num}");
         let diff = actual_num - expected_num;
 
         if expected_num > 0.0 {

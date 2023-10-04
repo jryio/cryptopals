@@ -7,6 +7,7 @@ use base64::{engine::general_purpose, Engine as _};
 ///
 /// Hexidecimal is base16 (0-9 + a-f)
 /// Base64 encoding is base64 (a-z A-Z 0-9 '=', '+', '/')
+#[allow(dead_code)]
 pub fn one_hex_to_base64(input: String) -> Result<String> {
     let raw_bytes = hex::decode(input)?;
     let encoded_base_64_string = general_purpose::STANDARD_NO_PAD.encode(raw_bytes);
@@ -19,7 +20,7 @@ mod tests {
     // Set 1 - Challenge 1
 
     #[test]
-    fn test_test_base64() {
+    fn test_challenge_1() {
         let input : String = "49276d206b696c6c696e6720796f757220627261696e206c696b65206120706f69736f6e6f7573206d757368726f6f6d".into();
         let output: String =
             "SSdtIGtpbGxpbmcgeW91ciBicmFpbiBsaWtlIGEgcG9pc29ub3VzIG11c2hyb29t".into();
