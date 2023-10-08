@@ -3,11 +3,19 @@ use crate::Result;
 /// Set 1 - Challenge 3
 pub fn three_single_xor_cipher(input: String) -> Result<String> {
     let input_bytes = hex::decode(input)?;
+    let (_key, output_bytes) = break_single_char_xor_cipher(input_bytes.as_slice());
+    Ok(String::from_utf8(output_bytes)?)
+}
 
+pub fn break_single_char_xor_cipher(input: &[u8]) -> (u8, Vec<u8>) {
     let mut highest_score = 0.0;
     let mut maybe_key = 0;
     for i in 0..255 {
-        let xor_result = xor_single_byte(&input_bytes, i);
+        let xor_result = xor_single_byte(input, i);
+        if !xor_result.is_ascii() {
+            continue;
+        }
+
         if let Ok(string) = std::str::from_utf8(&xor_result) {
             // Some results of XORing the input with a single character produce non-ascii values.
             // Therefore we want to look for letters, numbers, and punc
@@ -15,14 +23,15 @@ pub fn three_single_xor_cipher(input: String) -> Result<String> {
                 c.is_ascii_alphabetic()
                     || c.is_whitespace()
                     || c == '.'
-                    || c == '-'
                     || c == '\''
                     || c == '!'
                     || c == '?'
+                    || c == '\n'
             }) {
                 let score = frequency_score(xor_result.as_slice());
+                println!("challenge_3 score={score} highest_score={highest_score} maybe_key = {i}");
 
-                if score > highest_score {
+                if score >= highest_score {
                     highest_score = score;
                     maybe_key = i;
                 }
@@ -30,10 +39,7 @@ pub fn three_single_xor_cipher(input: String) -> Result<String> {
         }
     }
 
-    let maybe_plaintext_buf = xor_single_byte(input_bytes.as_slice(), maybe_key);
-    let maybe_plaintext = std::str::from_utf8(maybe_plaintext_buf.as_slice())?;
-
-    Ok(maybe_plaintext.into())
+    (maybe_key, xor_single_byte(input, maybe_key))
 }
 #[cfg(test)]
 mod tests {
@@ -49,7 +55,7 @@ mod tests {
         let output = three_single_xor_cipher(input);
 
         let answer = std::env::var("S1C3_ANS").expect(
-            "Set 1 - Challange 3 - Missing environment variable 'S1C3' containing solution",
+            "Set 1 - Challange 3 - Missing environment variable 'S1C3_ANS' containing solution",
         );
 
         assert!(output.is_ok());

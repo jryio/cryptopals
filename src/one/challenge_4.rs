@@ -41,7 +41,7 @@ mod tests {
         let input = include_str!("4.txt");
         let output = detect_single_char_xor(input.into());
         let answer = std::env::var("S1C4_ANS").expect(
-            "Set 1 - Challenge 4 - Missing environment variable 'S1C4' containing solutioln",
+            "Set 1 - Challenge 4 - Missing environment variable 'S1C4_ANS' containing solutioln",
         );
         assert!(output.is_ok());
         let output = output.unwrap();

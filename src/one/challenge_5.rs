@@ -1,8 +1,11 @@
+use crate::utils;
+
 /// Set 1 - Challenge 5
 /// Repeating XOR
 #[allow(dead_code)]
 pub fn repeating_key_xor(plaintext: String, key: String) -> String {
     let mut result: Vec<u8> = Vec::with_capacity(plaintext.len());
+    // We need to XOR each byte of the plaintext with each byte of the key modulo key_size
     for (i, b) in plaintext.bytes().enumerate() {
         let xor_single = b ^ (key.as_bytes()[i % key.len()]);
         result.push(xor_single);
