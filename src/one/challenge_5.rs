@@ -1,5 +1,3 @@
-use crate::utils;
-
 /// Set 1 - Challenge 5
 /// Repeating XOR
 #[allow(dead_code)]

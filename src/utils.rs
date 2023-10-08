@@ -1,4 +1,4 @@
-use std::{collections::HashMap, num};
+use std::collections::HashMap;
 
 /// Computes the XOR of every byte in `buffer` against `single`
 pub fn xor_single_byte(buffer: &[u8], single: u8) -> Vec<u8> {
@@ -9,6 +9,7 @@ pub fn xor_single_byte(buffer: &[u8], single: u8) -> Vec<u8> {
     result
 }
 
+#[allow(dead_code)]
 pub fn xor(first: &[u8], second: &[u8]) -> Vec<u8> {
     assert_eq!(
         first.len(),
@@ -37,83 +38,104 @@ pub fn xor_repeat(source: &[u8], key: &[u8]) -> Vec<u8> {
     result
 }
 
+static ASCII_CONTROL_END: u8 = 0x20;
+static ASCII_CONTROL_DEL: u8 = 0x7F;
+static ASCII_NEWLINE: u8 = b'\n';
+static ASCII_WHITESPACE: u8 = b' ';
+static ASCII_TAB: u8 = b'\t';
+static ASCII_PERIOD: u8 = b'.';
+static DEFAULT_FREQUENCY: f64 = 0.0;
+static ENGLISH_FREQUENCIES: [(u8, f64); 28] = [
+    (b'a', 6.09),
+    (b'b', 1.05),
+    (b'c', 2.84),
+    (b'd', 2.92),
+    (b'e', 11.36),
+    (b'f', 1.79),
+    (b'g', 1.38),
+    (b'h', 3.41),
+    (b'i', 5.44),
+    (b'j', 0.24),
+    (b'k', 0.41),
+    (b'l', 2.92),
+    (b'm', 2.76),
+    (b'n', 5.44),
+    (b'o', 6.00),
+    (b'p', 1.95),
+    (b'q', 0.24),
+    (b'r', 4.95),
+    (b's', 5.68),
+    (b't', 8.03),
+    (b'u', 2.43),
+    (b'v', 0.97),
+    (b'w', 1.38),
+    (b'x', 0.24),
+    (b'y', 1.30),
+    (b'z', 0.03),
+    (b' ', 12.17),
+    (b'.', 6.57), // Punctuation characters
+];
+
 /// Computes the frequency of characters in an buffer and compares against known English langauge
 /// character frequency, returning a score.
-pub fn frequency_score(buffer: &[u8]) -> f64 {
-    let default_frequency = 0.008;
-    let english_letters = String::from("abcdefghijklmnopqrstuvwxyz");
-    let english_frequency: [f64; 26] = [
-        8.2,   /* A */
-        1.5,   /* B */
-        2.8,   /* C */
-        4.3,   /* D */
-        12.7,  /* E */
-        2.2,   /* F */
-        2.0,   /* G */
-        6.1,   /* H */
-        7.0,   /* I */
-        0.15,  /* J */
-        0.77,  /* K */
-        4.0,   /* L */
-        2.4,   /* M */
-        6.7,   /* N */
-        7.5,   /* O */
-        1.9,   /* P */
-        0.095, /* Q */
-        6.0,   /* R */
-        6.3,   /* S */
-        9.1,   /* T */
-        2.8,   /* U */
-        0.98,  /* V */
-        2.4,   /* W */
-        0.15,  /* X */
-        2.0,   /* Y */
-        0.074, /* Z */
-    ];
+///
+/// The score is computed using the chi-sqaured test: (difference squared of the actual - expected
+/// values) divided by the expected value, summed for all measurements
+///
+/// Low values of chi-sqaured indicate a high fit between the recorded results and the expected.
+/// High score indicate large difference between actual and expected results.
+pub fn frequency_score(buffer: &[u8]) -> u32 {
+    // Highest score says that this is invalid
+    if !buffer.is_ascii() {
+        return std::u32::MAX;
+    }
 
-    let expected_frequencies: HashMap<char, f64> = english_letters
-        .chars()
-        .zip(english_frequency.iter())
-        .fold(HashMap::new(), |mut hash_map, (c, f)| {
-            hash_map.insert(c, *f / 100.0);
-
-            hash_map
-        });
-
-    // println!("english_frequency = {expected_frequencies:#?}");
+    // Highest score says that this is invalid
+    if buffer
+        .iter()
+        .any(|&c| c != ASCII_NEWLINE && (c < ASCII_CONTROL_END || c == ASCII_CONTROL_DEL))
+    {
+        return std::u32::MAX;
+    }
 
     let actual_chars_len = buffer.len() as f64;
-    let actual_frequenies: HashMap<char, f64> = buffer
+    let actual_chars_count: HashMap<u8, f64> = buffer
         .iter()
         .map(|&x| (x as char).to_ascii_lowercase())
         .fold(HashMap::new(), |mut hash_map, c| {
+            // ASCII a-z or A-Z
+            let key: u8 = if c.is_alphabetic() {
+                c as u8
+            }
+            // whitespace mapping
+            else if c as u8 == ASCII_WHITESPACE || c as u8 == ASCII_TAB {
+                ASCII_WHITESPACE
+            }
+            // Convert all other characters (punctuation or numbers) to '.'
+            else {
+                ASCII_PERIOD
+            };
+
             hash_map
-                .entry(c)
-                .and_modify(|f| *f = (*f + 1.0) / actual_chars_len)
-                .or_insert(0.0);
+                .entry(key)
+                .and_modify(|f| *f += 1.0)
+                .or_insert(DEFAULT_FREQUENCY);
 
             hash_map
         });
 
     let mut chi_sqrd = 0.0;
-
-    for (c, f) in actual_frequenies {
-        let expected_num = match expected_frequencies.get(&c) {
-            // In a 'perfect' string, how many of characters `c` would appear based on the
-            // english_frequency `f`
-            Some(f) => (*f) * (actual_chars_len),
-            None => default_frequency,
-        };
-
-        let actual_num = f;
-        let diff = actual_num - expected_num;
-
-        if expected_num > 0.0 {
-            chi_sqrd += (diff * diff) / expected_num;
-        }
+    for (c, f) in ENGLISH_FREQUENCIES {
+        let expect_num_char = (f / 100.0) * actual_chars_len;
+        let actual_num_char = actual_chars_count.get(&c).unwrap_or(&DEFAULT_FREQUENCY);
+        let diff = expect_num_char - actual_num_char;
+        // println!(
+        //     "char = {c} expected = {expect_num_char} actual = {actual_num_char} diff = {diff}"
+        // );
+        chi_sqrd += (diff * diff) / expect_num_char;
     }
-
-    chi_sqrd
+    // println!("chi-sqaured = {chi_sqrd}");
+    chi_sqrd as u32
 
     // println!("Expected Frequencies {:?}", expected_frequencies);
     // println!("Actual Frequencies {:?}", actual_frequenies);

@@ -8,34 +8,18 @@ pub fn three_single_xor_cipher(input: String) -> Result<String> {
 }
 
 pub fn break_single_char_xor_cipher(input: &[u8]) -> (u8, Vec<u8>) {
-    let mut highest_score = 0.0;
+    let mut best_score = std::u32::MAX;
     let mut maybe_key = 0;
     for i in 0..255 {
         let xor_result = xor_single_byte(input, i);
         if !xor_result.is_ascii() {
             continue;
         }
+        let score = frequency_score(xor_result.as_slice());
 
-        if let Ok(string) = std::str::from_utf8(&xor_result) {
-            // Some results of XORing the input with a single character produce non-ascii values.
-            // Therefore we want to look for letters, numbers, and punc
-            if string.chars().all(|c| {
-                c.is_ascii_alphabetic()
-                    || c.is_whitespace()
-                    || c == '.'
-                    || c == '\''
-                    || c == '!'
-                    || c == '?'
-                    || c == '\n'
-            }) {
-                let score = frequency_score(xor_result.as_slice());
-                println!("challenge_3 score={score} highest_score={highest_score} maybe_key = {i}");
-
-                if score >= highest_score {
-                    highest_score = score;
-                    maybe_key = i;
-                }
-            }
+        if score < best_score {
+            best_score = score;
+            maybe_key = i;
         }
     }
 

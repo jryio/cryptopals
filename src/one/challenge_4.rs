@@ -17,12 +17,12 @@ pub fn detect_single_char_xor(input: String) -> Result<String> {
         }
     }
 
-    let mut highest_score = 0.0;
+    let mut best_score = std::u32::MAX;
     let mut highest_plaintext: String = "".into();
     for p in maybe_plaintexts {
         let score = frequency_score(p.as_bytes());
-        if score > highest_score {
-            highest_score = score;
+        if score < best_score {
+            best_score = score;
             highest_plaintext = p;
         }
     }
